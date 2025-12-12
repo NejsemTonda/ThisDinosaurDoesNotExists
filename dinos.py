@@ -1,16 +1,16 @@
 import os
-from typing import List, Tuple, Optional
+from typing import List
 
 import numpy as np
 from PIL import Image
 
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
 
 class DINOS(Dataset):
-    H: int = 512
-    W: int = 512
+    H: int = 256
+    W: int = 256
     C: int = 3
 
     def __init__(
@@ -50,13 +50,14 @@ class DINOS(Dataset):
     def __getitem__(self, idx: int):
         path = self.files[idx]
         img = Image.open(path).convert("RGB")
+        img = img.resize((self.W, self.H))
 
         if self.transform is not None:
             x = self.transform(img)  # usually returns a torch.Tensor
         else:
             # Convert to torch tensor in CHW format
             arr = np.asarray(img, dtype=np.float32) / 255.0
-            x = torch.from_numpy(arr).permute(2, 0, 1)  # CHW
+            x = torch.from_numpy(arr).permute(0, 1, 2)  # CHW
 
         if self.return_paths:
             return x, path
