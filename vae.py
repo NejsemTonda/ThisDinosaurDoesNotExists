@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-
-# 66c297c9-0245-11eb-9574-ea7484399335
-# 9b1e3328-019f-11eb-9574-ea7484399335
-# ab5cb274-00ea-11eb-9574-ea7484399335
-
 import argparse
 import datetime
 import os
@@ -13,16 +8,18 @@ os.environ.setdefault("KERAS_BACKEND", "torch")  # Use PyTorch backend unless sp
 import keras
 import numpy as np
 import torch
+import torch.nn.functional as F
+from torch.utils.data._utils.collate import default_collate
 
-from mnist_v2 import MNIST
+from dinos import DINOS
 
 parser = argparse.ArgumentParser()
 # These arguments will be set appropriately by ReCodEx, even if you change them.
 parser.add_argument("--batch_size", default=50, type=int, help="Batch size.")
-parser.add_argument("--dataset", default="mnist", type=str, help="MNIST-like dataset to use.")
+parser.add_argument("--dataset", default="rescaled", type=str, help="MNIST-like dataset to use.")
 parser.add_argument("--decoder_layers", default=[500, 500], type=int, nargs="+", help="Decoder layers.")
 parser.add_argument("--encoder_layers", default=[500, 500], type=int, nargs="+", help="Encoder layers.")
-parser.add_argument("--epochs", default=50, type=int, help="Number of epochs.")
+parser.add_argument("--epochs", default=1, type=int, help="Number of epochs.")
 parser.add_argument("--recodex", default=False, action="store_true", help="Evaluation in ReCodEx.")
 parser.add_argument("--seed", default=42, type=int, help="Random seed.")
 parser.add_argument("--threads", default=1, type=int, help="Maximum number of threads to use.")
@@ -31,37 +28,20 @@ parser.add_argument("--z_dim", default=100, type=int, help="Dimension of Z.")
 # If you add more arguments, ReCodEx will keep them with your default values.
 
 
-class TorchTensorBoardCallback(keras.callbacks.Callback):
-    def __init__(self, path):
-        self._path = path
-        self._writers = {}
-
-    def writer(self, writer):
-        if writer not in self._writers:
-            import torch.utils.tensorboard
-            self._writers[writer] = torch.utils.tensorboard.SummaryWriter(os.path.join(self._path, writer))
-        return self._writers[writer]
-
-    def add_logs(self, writer, logs, step):
-        if logs:
-            for key, value in logs.items():
-                self.writer(writer).add_scalar(key, value, step)
-            self.writer(writer).flush()
-
-    def on_epoch_end(self, epoch, logs=None):
-        if logs:
-            if isinstance(getattr(self.model, "optimizer", None), keras.optimizers.Optimizer):
-                logs = logs | {"learning_rate": keras.ops.convert_to_numpy(self.model.optimizer.learning_rate)}
-            self.add_logs("train", {k: v for k, v in logs.items() if not k.startswith("val_")}, epoch + 1)
-            self.add_logs("val", {k[4:]: v for k, v in logs.items() if k.startswith("val_")}, epoch + 1)
+def _collate_as_tuple(batch):
+    collated = default_collate(batch)
+    if isinstance(collated, torch.Tensor):
+        return (collated,)
+    return collated
 
 
 # The VAE model
 class VAE(keras.Model):
     def __init__(self, args: argparse.Namespace) -> None:
         super().__init__()
-        self.built = True
+        #self.built = True
         self.learning_rate = 1e-3
+        self._min_sd = 1e-6
 
         self._seed = args.seed
         self._z_dim = args.z_dim
@@ -75,15 +55,15 @@ class VAE(keras.Model):
         # - generates two outputs `z_mean` and `z_sd`, each passing the result
         #   of the above bullet through its own dense layer of `args.z_dim` units,
         #   with `z_sd` using exponential function as activation to keep it positive.
-        inputs = keras.layers.Input([MNIST.H, MNIST.W, MNIST.C])
+        inputs = keras.layers.Input([DINOS.H, DINOS.W, DINOS.C])
         hidden = keras.layers.Flatten()(inputs)
         for l in args.encoder_layers:
             hidden = keras.layers.Dense(l, activation="relu")(hidden)
 
         z_mean = keras.layers.Dense(args.z_dim)(hidden)
-        z_sd = keras.layers.Dense(args.z_dim, activation="exponential")(hidden)
+        z_log_sd = keras.layers.Dense(args.z_dim)(hidden)
         
-        self.encoder = keras.Model(inputs=inputs, outputs=(z_mean, z_sd))
+        self.encoder = keras.Model(inputs=inputs, outputs=(z_mean, z_log_sd))
          
 
         # TODO: Define `self.decoder` as a `keras.Model`, which
@@ -98,53 +78,70 @@ class VAE(keras.Model):
         for l in args.decoder_layers:
             hidden2 = keras.layers.Dense(l, activation="relu")(hidden2)
             
-        hidden2 = keras.layers.Dense(MNIST.H * MNIST.W * MNIST.C, activation="sigmoid")(hidden2)
-        hidden2 = keras.layers.Reshape([MNIST.H, MNIST.W, MNIST.C])(hidden2)
+        hidden2 = keras.layers.Dense(DINOS.H * DINOS.W * DINOS.C, activation="sigmoid")(hidden2)
+        hidden2 = keras.layers.Reshape([DINOS.H, DINOS.W, DINOS.C])(hidden2)
 
         self.decoder = keras.Model(inputs=decoder_input, outputs=hidden2)
-        self.tb_callback = TorchTensorBoardCallback(args.logdir)
 
-    def train_step(self, images: torch.Tensor) -> dict[str, torch.Tensor]:
-        self.zero_grad()
+        self.loss_tracker = keras.metrics.Mean(name="loss")
+        self.recon_tracker = keras.metrics.Mean(name="reconstruction_loss")
+        self.kl_tracker = keras.metrics.Mean(name="latent_loss")
+        self._recon_loss = keras.losses.BinaryCrossentropy()
 
-        # TODO: Compute `z_mean` and `z_sd` of the given images using `self.encoder`.
-        # Note that you should pass `training=True` to the `self.encoder`.
+        
+    def call(self, inputs, training=False):
+        z_mean, z_log_sd = self.encoder(inputs, training=training)
+        z_sd = F.softplus(z_log_sd) + self._min_sd
+        q = torch.distributions.Normal(z_mean, z_sd)
+        z = q.rsample() if training else z_mean
+        return self.decoder(z, training=training)
 
-        z_mean, z_sd = self.encoder(images, training=True)
 
-        # TODO: Sample `z` from a Normal distribution with mean `z_mean` and
-        # standard deviation `z_sd`. Start by creating corresponding
-        # distribution `torch.distributions.Normal(...)` and then run the
-        # `rsample()` method. The `rsample()` method performs sampling using
-        # the reparametrization trick, or fails when it is not supported
-        # by the distribution.
-        dist = torch.distributions.Normal(z_mean, z_sd)
-        z = dist.rsample()
+    def train_step(self, data):
+        # Keras may pass data as x or (x, y). Our loader returns (x, y).
+        if isinstance(data, (tuple, list)):
+            x = data[0]
+            y = data[1] if len(data) > 1 else data[0]
+        else:
+            x = data
+            y = data
+        x = x.to(dtype=torch.float32)
+        y = y.to(dtype=torch.float32)
 
-        # TODO: Decode images using `z` (also passing `training=True` to the `self.decoder`).
-        y_pred = self.decoder(z, training=True)
+        self.zero_grad(set_to_none=True)
 
-        # TODO: Compute `reconstruction_loss` using `self.compute_loss(x, y_true, y_pred)`.
-        reconstruction_loss = self.compute_loss(z, images, y_pred)
+        z_mean, z_log_sd = self.encoder(x, training=True)
+        z_sd = F.softplus(z_log_sd) + self._min_sd
+        q = torch.distributions.Normal(z_mean, z_sd)
+        z = q.rsample()
+        x_pred = self.decoder(z, training=True)
 
-        # TODO: Compute `latent_loss` as a mean of KL divergences of suitable distributions.
-        # Note that PyTorch offers `torch.distributions.kl.kl_divergence` computing
-        # the exact KL divergence of two given distributions.
-        latent_loss = torch.distributions.kl.kl_divergence(dist, torch.distributions.Normal(0,1)).mean()
+        # Reconstruction loss
+        recon = self._recon_loss(y, x_pred)
 
-        # TODO: Compute `loss` as a sum of the `reconstruction_loss` (multiplied by the number
-        # of pixels in an image) and the `latent_loss` (multiplied by self._z_dim).
-        loss = reconstruction_loss*(MNIST.H * MNIST.W * MNIST.C) + latent_loss * self._z_dim
+        # KL(q(z|x) || p(z))
+        p = torch.distributions.Normal(torch.zeros_like(z_mean), torch.ones_like(z_sd))
+        kl = torch.distributions.kl.kl_divergence(q, p).mean()
 
-        # TODO: Perform a single step of the `self.optimizer`, with respect to `self.trainable_variables`,
-        # which are trainable variables of both the encoder and the decoder.
+        loss = recon * (DINOS.H * DINOS.W * DINOS.C) + kl * self._z_dim
+
         loss.backward()
-        grads = [param.grad for param in self.encoder.parameters()] + [param.grad for param in self.decoder.parameters()]
-        self.optimizer.apply_gradients(zip(grads, self.trainable_variables))
 
+        trainable_weights = self.trainable_weights
+        grads = [w.value.grad for w in trainable_weights]
+        with torch.no_grad():
+            self.optimizer.apply(grads, trainable_weights)
 
-        self._loss_tracker.update_state(loss)
-        return {"reconstruction_loss": reconstruction_loss, "latent_loss": latent_loss, "loss": loss}
+        # Update trackers (these are what Keras logs)
+        self.loss_tracker.update_state(loss.detach())
+        self.recon_tracker.update_state(recon.detach())
+        self.kl_tracker.update_state(kl.detach())
+
+        return {
+            "loss": self.loss_tracker.result(),
+            "reconstruction_loss": self.recon_tracker.result(),
+            "latent_loss": self.kl_tracker.result(),
+        }
 
     def generate(self, epoch: int, logs: dict[str, float]) -> None:
         GRID = 20
@@ -168,10 +165,9 @@ class VAE(keras.Model):
         # Stack the random images, then an empty row, and finally interpolated images
         image = torch.cat([
             torch.cat([torch.cat(list(images), axis=1) for images in torch.chunk(random_images, GRID)], axis=0),
-            torch.zeros([MNIST.H * GRID, MNIST.W, MNIST.C]),
+            torch.zeros([DINOS.H * GRID, DINOS.W, DINOS.C]),
             torch.cat([torch.cat(list(images), axis=1) for images in torch.chunk(interpolated_images, GRID)], axis=0),
         ], axis=1)
-        self.tb_callback.writer("train").add_image("images", image, epoch + 1, dataformats="HWC")
 
 
 def main(args: argparse.Namespace) -> float:
@@ -189,15 +185,15 @@ def main(args: argparse.Namespace) -> float:
     ))
 
     # Load data
-    mnist = MNIST(args.dataset, size={"train": args.train_size})
-    train = mnist.train.transform(lambda example: example["image"] / 255)
-    train = torch.utils.data.DataLoader(train, batch_size=args.batch_size, shuffle=True)
+    din = DINOS(args.dataset)
+    train = torch.utils.data.DataLoader(
+        din, batch_size=args.batch_size, shuffle=True, collate_fn=_collate_as_tuple
+    )
 
     # Create the network and train
     network = VAE(args)
-    network.compile(optimizer=keras.optimizers.Adam(), loss=keras.losses.BinaryCrossentropy())
-    logs = network.fit(train, epochs=args.epochs, callbacks=[
-        keras.callbacks.LambdaCallback(on_epoch_end=network.generate), network.tb_callback])
+    network.compile(optimizer=keras.optimizers.Adam())
+    logs = network.fit(train, epochs=args.epochs)
 
     # Return loss for ReCodEx to validate
     return logs.history["loss"][-1]
