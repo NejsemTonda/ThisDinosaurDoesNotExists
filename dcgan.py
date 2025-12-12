@@ -1,20 +1,15 @@
 #!/usr/bin/env python3
-
-# 66c297c9-0245-11eb-9574-ea7484399335
-# 9b1e3328-019f-11eb-9574-ea7484399335
-# ab5cb274-00ea-11eb-9574-ea7484399335
-
 import argparse
 import datetime
 import os
 import re
-os.environ.setdefault("KERAS_BACKEND", "torch")  # Use PyTorch backend unless specified otherwise
+os.environ.setdefault("KERAS_BACKEND", "torch")
 
 import keras
 import numpy as np
 import torch
 
-from mnist_v2 import MNIST
+from dinos import DINOS
 
 parser = argparse.ArgumentParser()
 # These arguments will be set appropriately by ReCodEx, even if you change them.
@@ -27,31 +22,6 @@ parser.add_argument("--threads", default=1, type=int, help="Maximum number of th
 parser.add_argument("--train_size", default=None, type=int, help="Limit on the train set size.")
 parser.add_argument("--z_dim", default=100, type=int, help="Dimension of Z.")
 # If you add more arguments, ReCodEx will keep them with your default values.
-
-
-class TorchTensorBoardCallback(keras.callbacks.Callback):
-    def __init__(self, path):
-        self._path = path
-        self._writers = {}
-
-    def writer(self, writer):
-        if writer not in self._writers:
-            import torch.utils.tensorboard
-            self._writers[writer] = torch.utils.tensorboard.SummaryWriter(os.path.join(self._path, writer))
-        return self._writers[writer]
-
-    def add_logs(self, writer, logs, step):
-        if logs:
-            for key, value in logs.items():
-                self.writer(writer).add_scalar(key, value, step)
-            self.writer(writer).flush()
-
-    def on_epoch_end(self, epoch, logs=None):
-        if logs:
-            if isinstance(getattr(self.model, "optimizer", None), keras.optimizers.Optimizer):
-                logs = logs | {"learning_rate": keras.ops.convert_to_numpy(self.model.optimizer.learning_rate)}
-            self.add_logs("train", {k: v for k, v in logs.items() if not k.startswith("val_")}, epoch + 1)
-            self.add_logs("val", {k[4:]: v for k, v in logs.items() if k.startswith("val_")}, epoch + 1)
 
 
 # The GAN model
@@ -80,17 +50,17 @@ class GAN(keras.Model):
         hidden_generator = keras.layers.BatchNormalization()(hidden_generator)
         hidden_generator = keras.layers.ReLU()(hidden_generator)
 
-        hidden_generator = keras.layers.Dense(MNIST.H // 4 * MNIST.W // 4 * 64)(hidden_generator)
+        hidden_generator = keras.layers.Dense(DINOS.H // 4 * DINOS.W // 4 * 64)(hidden_generator)
         hidden_generator = keras.layers.BatchNormalization()(hidden_generator)
         hidden_generator = keras.layers.ReLU()(hidden_generator)
 
-        hidden_generator = keras.layers.Reshape([MNIST.H // 4, MNIST.W // 4, 64])(hidden_generator)
+        hidden_generator = keras.layers.Reshape([DINOS.H // 4, DINOS.W // 4, 64])(hidden_generator)
 
         hidden_generator = keras.layers.Conv2DTranspose(32, 4, 2, padding='same')(hidden_generator)
         hidden_generator = keras.layers.BatchNormalization()(hidden_generator)
         hidden_generator = keras.layers.ReLU()(hidden_generator)
 
-        outputs_generator = keras.layers.Conv2DTranspose(MNIST.C, 4, 2, padding='same', activation='sigmoid')(hidden_generator)
+        outputs_generator = keras.layers.Conv2DTranspose(DINOS.C, 4, 2, padding='same', activation='sigmoid')(hidden_generator)
 
         self.generator = keras.Model(inputs=inputs_generator, outputs=outputs_generator)
 
@@ -105,7 +75,7 @@ class GAN(keras.Model):
         # - flattens the current representation
         # - applies batch normalized dense layer with 1_024 units and ReLU activation
         # - applies output dense layer with one output and a suitable activation function
-        inputs_discriminator = keras.layers.Input([MNIST.H, MNIST.W, MNIST.C])
+        inputs_discriminator = keras.layers.Input([DINOS.H, DINOS.W, DINOS.C])
 
         hidden_discriminator = keras.layers.Conv2D(32, 5, padding='same')(inputs_discriminator)
         hidden_discriminator = keras.layers.BatchNormalization()(hidden_discriminator)
@@ -129,7 +99,6 @@ class GAN(keras.Model):
 
         self.discriminator = keras.Model(inputs=inputs_discriminator, outputs=outputs_discriminator)
 
-        self.tb_callback = TorchTensorBoardCallback(args.logdir)
 
     # We override `compile`, because we want to use two optimizers.
     def compile(
@@ -228,10 +197,9 @@ class GAN(keras.Model):
         # Stack the random images, then an empty row, and finally interpolated images
         image = torch.cat([
             torch.cat([torch.cat(list(images), axis=1) for images in torch.chunk(random_images, GRID)], axis=0),
-            torch.zeros([MNIST.H * GRID, MNIST.W, MNIST.C]),
+            torch.zeros([DINOS.H * GRID, DINOS.W, DINOS.C]),
             torch.cat([torch.cat(list(images), axis=1) for images in torch.chunk(interpolated_images, GRID)], axis=0),
         ], axis=1)
-        self.tb_callback.writer("train").add_image("images", image, epoch + 1, dataformats="HWC")
 
 
 def main(args: argparse.Namespace) -> dict[str, float]:
@@ -249,9 +217,8 @@ def main(args: argparse.Namespace) -> dict[str, float]:
     ))
 
     # Load data
-    mnist = MNIST(args.dataset, size={"train": args.train_size})
-    train = mnist.train.transform(lambda example: example["image"] / 255)
-    train = torch.utils.data.DataLoader(train, batch_size=args.batch_size, shuffle=True)
+    dinos = DINOS(args.dataset)
+    train = torch.utils.data.DataLoader(dinos, batch_size=args.batch_size, shuffle=True)
 
     # Create the network and train
     network = GAN(args)
@@ -261,8 +228,7 @@ def main(args: argparse.Namespace) -> dict[str, float]:
         loss=keras.losses.BinaryCrossentropy(),
         metric=keras.metrics.BinaryAccuracy("discriminator_accuracy"),
     )
-    logs = network.fit(train, epochs=args.epochs, callbacks=[
-        keras.callbacks.LambdaCallback(on_epoch_end=network.generate), network.tb_callback])
+    logs = network.fit(train, epochs=args.epochs, callbacks=[keras.callbacks.LambdaCallback(on_epoch_end=network.generate)])
 
     # Return the loss and the discriminator accuracy for ReCodEx to validate.
     return {metric: logs.history[metric][-1] for metric in ["loss", "discriminator_accuracy"]}
