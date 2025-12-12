@@ -9,19 +9,19 @@ from torch.utils.data import Dataset, DataLoader
 
 
 class DINOS(Dataset):
+    H: int = 512
+    W: int = 512
+    C: int = 3
+
     def __init__(
         self,
         folder: str,
-        size: Tuple[int, int] = (512, 512),
-        channels: int = 3,
         extensions: List[str] = [".png", ".jpg", ".jpeg"],
         recursive: bool = False,
         return_paths: bool = False,
         transform=None,
     ):
         self.folder = folder
-        self.h, self.w = size
-        self.channels = channels
         self.return_paths = return_paths
         self.transform = transform
 
@@ -56,8 +56,6 @@ class DINOS(Dataset):
         else:
             # Convert to torch tensor in CHW format
             arr = np.asarray(img, dtype=np.float32) / 255.0
-            if self.channels == 1:
-                arr = arr[..., np.newaxis]          # HWC
             x = torch.from_numpy(arr).permute(2, 0, 1)  # CHW
 
         if self.return_paths:
