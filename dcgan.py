@@ -14,7 +14,7 @@ from dinos import DINOS
 
 parser = argparse.ArgumentParser()
 # These arguments will be set appropriately by ReCodEx, even if you change them.
-parser.add_argument("--batch_size", default=1, type=int, help="Batch size.")
+parser.add_argument("--batch_size", default=50, type=int, help="Batch size.")
 parser.add_argument("--dataset", default="dataset", type=str, help="MNIST-like dataset to use.")
 parser.add_argument("--epochs", default=50, type=int, help="Number of epochs.")
 parser.add_argument("--recodex", default=False, action="store_true", help="Evaluation in ReCodEx.")
