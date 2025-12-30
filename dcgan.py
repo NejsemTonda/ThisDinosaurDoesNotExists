@@ -25,7 +25,7 @@ parser.add_argument("--z_dim", default=100, type=int, help="Dimension of Z.")
 # If you add more arguments, ReCodEx will keep them with your default values.
 parser.add_argument("--generate_from", default=None, type=str, help="Path to saved generator model.")
 parser.add_argument("--num_generate", default=16, type=int, help="Number of images to generate.")
-parser.add_argument("--save_model", default=False, type=bool, help="Indicator, whether the model should be saved.")
+parser.add_argument("--save_to_dir", default=None, type=str, help="Indicator, whether the model should be saved.")
 
 # The GAN model
 class GAN(keras.Model):
@@ -224,12 +224,11 @@ def main(args: argparse.Namespace) -> dict[str, float]:
         torch.set_num_interop_threads(args.threads)
 
     # Create logdir name
-    args.logdir = os.path.join("logs", "dcgan")
-    # args.logdir = os.path.join("logs", "{}-{}-{}".format(
-    #     os.path.basename(globals().get("__file__", "notebook")),
-    #     datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
-    #     ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items())))
-    # ))
+    args.logdir = os.path.join("logs", "{}-{}-{}".format(
+        os.path.basename(globals().get("__file__", "notebook")),
+        datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
+        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items())))
+    ))
 
     # Load data
     dinos = DINOS(args.dataset)
@@ -246,9 +245,9 @@ def main(args: argparse.Namespace) -> dict[str, float]:
     logs = network.fit(train, epochs=args.epochs, callbacks=[keras.callbacks.LambdaCallback(on_epoch_end=network.generate)])
 
     # Save trained generator model
-    if args.save_model:
-        os.makedirs(args.logdir, exist_ok=True)
-        generator_path = os.path.join(args.logdir, "generator.keras")
+    if args.save_to_dir is not None:
+        os.makedirs(args.save_to_dir, exist_ok=True)
+        generator_path = os.path.join(args.save_to_dir, "generator.keras")
         network.generator.save(generator_path)
         print(f"Generator saved to {generator_path}")
 
