@@ -14,8 +14,8 @@ from dinos import DINOS
 
 parser = argparse.ArgumentParser()
 # These arguments will be set appropriately by ReCodEx, even if you change them.
-parser.add_argument("--batch_size", default=50, type=int, help="Batch size.")
-parser.add_argument("--dataset", default="mnist", type=str, help="MNIST-like dataset to use.")
+parser.add_argument("--batch_size", default=1, type=int, help="Batch size.")
+parser.add_argument("--dataset", default="dataset", type=str, help="MNIST-like dataset to use.")
 parser.add_argument("--epochs", default=50, type=int, help="Number of epochs.")
 parser.add_argument("--recodex", default=False, action="store_true", help="Evaluation in ReCodEx.")
 parser.add_argument("--seed", default=42, type=int, help="Random seed.")
@@ -23,7 +23,9 @@ parser.add_argument("--threads", default=1, type=int, help="Maximum number of th
 parser.add_argument("--train_size", default=None, type=int, help="Limit on the train set size.")
 parser.add_argument("--z_dim", default=100, type=int, help="Dimension of Z.")
 # If you add more arguments, ReCodEx will keep them with your default values.
-
+parser.add_argument("--generate_from", default=None, type=str, help="Path to saved generator model.")
+parser.add_argument("--num_generate", default=16, type=int, help="Number of images to generate.")
+parser.add_argument("--save_model", default=True, type=bool, help="Indicator, whether the model should be saved.")
 
 # The GAN model
 class GAN(keras.Model):
@@ -202,8 +204,19 @@ class GAN(keras.Model):
             torch.cat([torch.cat(list(images), axis=1) for images in torch.chunk(interpolated_images, GRID)], axis=0),
         ], axis=1)
 
+def load_generator_and_generate(path: str, num_images: int, z_dim: int):
+    generator = keras.models.load_model(path)
+
+    z = torch.randn([num_images, z_dim])
+    images = generator(z, training=False)
+
+    return images
 
 def main(args: argparse.Namespace) -> dict[str, float]:
+    if args.generate_from is not None:
+        imgs = load_generator_and_generate(args.generate_from, args.num_generate, args.z_dim)
+        print(f"Generated images shape: {imgs.shape}")
+        return {}
     # Set the random seed and the number of threads.
     keras.utils.set_random_seed(args.seed)
     if args.threads:
@@ -211,11 +224,12 @@ def main(args: argparse.Namespace) -> dict[str, float]:
         torch.set_num_interop_threads(args.threads)
 
     # Create logdir name
-    args.logdir = os.path.join("logs", "{}-{}-{}".format(
-        os.path.basename(globals().get("__file__", "notebook")),
-        datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
-        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items())))
-    ))
+    args.logdir = os.path.join("logs", "dcgan")
+    # args.logdir = os.path.join("logs", "{}-{}-{}".format(
+    #     os.path.basename(globals().get("__file__", "notebook")),
+    #     datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
+    #     ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items())))
+    # ))
 
     # Load data
     dinos = DINOS(args.dataset)
@@ -230,6 +244,13 @@ def main(args: argparse.Namespace) -> dict[str, float]:
         metric=keras.metrics.BinaryAccuracy("discriminator_accuracy"),
     )
     logs = network.fit(train, epochs=args.epochs, callbacks=[keras.callbacks.LambdaCallback(on_epoch_end=network.generate)])
+
+    # Save trained generator model
+    if args.save_model:
+        os.makedirs(args.logdir, exist_ok=True)
+        generator_path = os.path.join(args.logdir, "generator.keras")
+        network.generator.save(generator_path)
+        print(f"Generator saved to {generator_path}")
 
     # Return the loss and the discriminator accuracy for ReCodEx to validate.
     return {metric: logs.history[metric][-1] for metric in ["loss", "discriminator_accuracy"]}
