@@ -25,7 +25,7 @@ parser.add_argument("--z_dim", default=100, type=int, help="Dimension of Z.")
 # If you add more arguments, ReCodEx will keep them with your default values.
 parser.add_argument("--generate_from", default=None, type=str, help="Path to saved generator model.")
 parser.add_argument("--num_generate", default=16, type=int, help="Number of images to generate.")
-parser.add_argument("--save_model", default=True, type=bool, help="Indicator, whether the model should be saved.")
+parser.add_argument("--save_model", default=False, type=bool, help="Indicator, whether the model should be saved.")
 
 # The GAN model
 class GAN(keras.Model):
