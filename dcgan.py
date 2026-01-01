@@ -263,11 +263,12 @@ def main(args: argparse.Namespace) -> dict[str, float]:
         loss=keras.losses.BinaryCrossentropy(),
         metric=keras.metrics.BinaryAccuracy("discriminator_accuracy"),
     )
-    logs = network.fit(train, epochs=args.epochs, callbacks=[keras.callbacks.LambdaCallback(on_epoch_end=network.generate)])
 
     if args.resume_from is not None:
         print(f"Resuming training from {args.resume_from}")
         load_checkpoint(network, args.resume_from)
+
+    logs = network.fit(train, epochs=args.epochs, callbacks=[keras.callbacks.LambdaCallback(on_epoch_end=network.generate)])
 
     # Save trained generator model
     if args.save_to_dir is not None:
