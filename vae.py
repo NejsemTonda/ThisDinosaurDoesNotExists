@@ -31,6 +31,8 @@ parser.add_argument("--z_dim", default=100, type=int, help="Dimension of Z.")
 parser.add_argument("--generate_from", default=None, type=str, help="Generate images instead of training.")
 parser.add_argument("--num_generate", default=1, type=int, help="How many images to generate.")
 parser.add_argument("--save_to_dir", default=None, type=str, help="Path to save/load the model.")
+parser.add_argument("--resume_from", default=None, type=str, help="Path to saved VAE checkpoint to continue training from.")
+
 
 
 
@@ -196,6 +198,10 @@ def main(args: argparse.Namespace) -> float:
     # Create the network and train
     network = VAE(args)
     network.compile(optimizer=keras.optimizers.Adam())
+
+    if args.resume_from is not None:
+        print(f"Resuming training from {args.resume_from}")
+        load_model(network, args.resume_from)
 
     # If generation mode → load and generate
     if args.generate_from is not None:
