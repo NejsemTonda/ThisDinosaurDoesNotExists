@@ -9,14 +9,16 @@ import keras
 import numpy as np
 import torch
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
 from torch.utils.data._utils.collate import default_collate
+
 
 from dinos import DINOS
 
 parser = argparse.ArgumentParser()
 # These arguments will be set appropriately by ReCodEx, even if you change them.
 parser.add_argument("--batch_size", default=50, type=int, help="Batch size.")
-parser.add_argument("--dataset", default="rescaled", type=str, help="MNIST-like dataset to use.")
+parser.add_argument("--dataset", default="dataset", type=str, help="MNIST-like dataset to use.")
 parser.add_argument("--decoder_layers", default=[500, 500], type=int, nargs="+", help="Decoder layers.")
 parser.add_argument("--encoder_layers", default=[500, 500], type=int, nargs="+", help="Encoder layers.")
 parser.add_argument("--epochs", default=1, type=int, help="Number of epochs.")
@@ -26,6 +28,10 @@ parser.add_argument("--threads", default=1, type=int, help="Maximum number of th
 parser.add_argument("--train_size", default=None, type=int, help="Limit on the train set size.")
 parser.add_argument("--z_dim", default=100, type=int, help="Dimension of Z.")
 # If you add more arguments, ReCodEx will keep them with your default values.
+parser.add_argument("--generate_from", default=None, type=str, help="Generate images instead of training.")
+parser.add_argument("--num_generate", default=1, type=int, help="How many images to generate.")
+parser.add_argument("--save_to_dir", default=None, type=str, help="Path to save/load the model.")
+
 
 
 def _collate_as_tuple(batch):
@@ -169,6 +175,16 @@ class VAE(keras.Model):
             torch.cat([torch.cat(list(images), axis=1) for images in torch.chunk(interpolated_images, GRID)], axis=0),
         ], axis=1)
 
+def save_model(model: VAE, path: str):
+    torch.save({
+        "encoder": model.encoder.state_dict(),
+        "decoder": model.decoder.state_dict(),
+    }, path)
+
+def load_model(model: VAE, path: str):
+    checkpoint = torch.load(path, map_location="cpu")
+    model.encoder.load_state_dict(checkpoint["encoder"])
+    model.decoder.load_state_dict(checkpoint["decoder"])
 
 def main(args: argparse.Namespace) -> float:
     # Set the random seed and the number of threads.
@@ -176,6 +192,26 @@ def main(args: argparse.Namespace) -> float:
     if args.threads:
         torch.set_num_threads(args.threads)
         torch.set_num_interop_threads(args.threads)
+
+    # Create the network and train
+    network = VAE(args)
+    network.compile(optimizer=keras.optimizers.Adam())
+
+    # If generation mode → load and generate
+    if args.generate_from is not None:
+        print(f"Loading model from {args.generate_from}")
+        load_model(network, args.generate_from)
+
+        with torch.no_grad():
+            z = torch.randn(args.num_generate, args.z_dim)
+            images = network.decoder(z, training=False)
+
+        images = images.cpu().numpy()
+        plt.imshow(images[0])
+        plt.show()
+        # np.save(args.output, images)
+        # print(f"Generated {args.num_generate} images → saved to {args.output}")
+        return 0.0
 
     # Create logdir name
     args.logdir = os.path.join("logs", "{}-{}-{}".format(
@@ -190,10 +226,12 @@ def main(args: argparse.Namespace) -> float:
         din, batch_size=args.batch_size, shuffle=True, collate_fn=_collate_as_tuple
     )
 
-    # Create the network and train
-    network = VAE(args)
-    network.compile(optimizer=keras.optimizers.Adam())
     logs = network.fit(train, epochs=args.epochs)
+
+    if args.save_to_dir is not None:
+        generator_path = os.path.join(args.save_to_dir, "vae_model.pt")
+        print(f"Saving model to {generator_path}")
+        save_model(network, generator_path)
 
     # Return loss for ReCodEx to validate
     return logs.history["loss"][-1]
