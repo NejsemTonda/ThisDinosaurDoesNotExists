@@ -218,8 +218,6 @@ def save_checkpoint(network: GAN, path: str):
     torch.save({
         "generator": network.generator.state_dict(),
         "discriminator": network.discriminator.state_dict(),
-        "gen_opt": network.generator_optimizer.state_dict(),
-        "disc_opt": network.discriminator_optimizer.state_dict(),
     }, path)
 
 
@@ -227,8 +225,6 @@ def load_checkpoint(network: GAN, path: str):
     checkpoint = torch.load(path, map_location="cpu")
     network.generator.load_state_dict(checkpoint["generator"])
     network.discriminator.load_state_dict(checkpoint["discriminator"])
-    network.generator_optimizer.load_state_dict(checkpoint["gen_opt"])
-    network.discriminator_optimizer.load_state_dict(checkpoint["disc_opt"])
 
 def main(args: argparse.Namespace) -> dict[str, float]:
     if args.generate_from is not None:
