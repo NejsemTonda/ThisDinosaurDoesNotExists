@@ -27,6 +27,7 @@ parser.add_argument("--z_dim", default=100, type=int, help="Dimension of Z.")
 parser.add_argument("--generate_from", default=None, type=str, help="Path to saved generator model.")
 parser.add_argument("--num_generate", default=1, type=int, help="Number of images to generate.")
 parser.add_argument("--save_to_dir", default=None, type=str, help="Indicator, whether the model should be saved.")
+parser.add_argument("--resume_from", default=None, type=str, help="Path to checkpoint to continue training from.")
 
 # The GAN model
 class GAN(keras.Model):
@@ -213,6 +214,22 @@ def load_generator_and_generate(path: str, num_images: int, z_dim: int):
 
     return images
 
+def save_checkpoint(network: GAN, path: str):
+    torch.save({
+        "generator": network.generator.state_dict(),
+        "discriminator": network.discriminator.state_dict(),
+        "gen_opt": network.generator_optimizer.state_dict(),
+        "disc_opt": network.discriminator_optimizer.state_dict(),
+    }, path)
+
+
+def load_checkpoint(network: GAN, path: str):
+    checkpoint = torch.load(path, map_location="cpu")
+    network.generator.load_state_dict(checkpoint["generator"])
+    network.discriminator.load_state_dict(checkpoint["discriminator"])
+    network.generator_optimizer.load_state_dict(checkpoint["gen_opt"])
+    network.discriminator_optimizer.load_state_dict(checkpoint["disc_opt"])
+
 def main(args: argparse.Namespace) -> dict[str, float]:
     if args.generate_from is not None:
         imgs = load_generator_and_generate(args.generate_from, args.num_generate, args.z_dim)
@@ -248,12 +265,22 @@ def main(args: argparse.Namespace) -> dict[str, float]:
     )
     logs = network.fit(train, epochs=args.epochs, callbacks=[keras.callbacks.LambdaCallback(on_epoch_end=network.generate)])
 
+    if args.resume_from is not None:
+        print(f"Resuming training from {args.resume_from}")
+        load_checkpoint(network, args.resume_from)
+
     # Save trained generator model
     if args.save_to_dir is not None:
         os.makedirs(args.save_to_dir, exist_ok=True)
+
         generator_path = os.path.join(args.save_to_dir, "generator.keras")
+        checkpoint_path = os.path.join(args.save_to_dir, "checkpoint.pt")
+
         network.generator.save(generator_path)
+        save_checkpoint(network, checkpoint_path)
+
         print(f"Generator saved to {generator_path}")
+        print(f"Checkpoint saved to {checkpoint_path}")
 
     # Return the loss and the discriminator accuracy for ReCodEx to validate.
     return {metric: logs.history[metric][-1] for metric in ["loss", "discriminator_accuracy"]}
