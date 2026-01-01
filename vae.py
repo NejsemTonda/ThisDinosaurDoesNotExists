@@ -229,6 +229,7 @@ def main(args: argparse.Namespace) -> float:
     logs = network.fit(train, epochs=args.epochs)
 
     if args.save_to_dir is not None:
+        os.makedirs(args.save_to_dir, exist_ok=True)
         generator_path = os.path.join(args.save_to_dir, "vae_model.pt")
         print(f"Saving model to {generator_path}")
         save_model(network, generator_path)
