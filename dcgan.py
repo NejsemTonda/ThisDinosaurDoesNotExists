@@ -183,26 +183,28 @@ class GAN(keras.Model):
     def generate(self, epoch: int, logs: dict[str, torch.Tensor]) -> None:
         GRID = 20
 
+        device = next(self.generator.parameters()).device
+
         # Generate GRIDxGRID images
-        random_images = self.generator(self._z_prior.sample([GRID * GRID]), training=False)
+        random_images = self.generator(self._z_prior.sample([GRID * GRID]).to(device), training=False)
 
         # Generate GRIDxGRID interpolated images
         if self._z_dim == 2:
             # Use 2D grid for sampled Z
-            starts = torch.stack([-2 * torch.ones(GRID), torch.linspace(-2., 2., GRID)], -1)
-            ends = torch.stack([2 * torch.ones(GRID), torch.linspace(-2., 2., GRID)], -1)
+            starts = torch.stack([-2 * torch.ones(GRID, device=device), torch.linspace(-2., 2., GRID, device=device)], -1)
+            ends = torch.stack([2 * torch.ones(GRID, device=device), torch.linspace(-2., 2., GRID, device=device)], -1)
         else:
             # Generate random Z
-            starts = self._z_prior.sample([GRID])
-            ends = self._z_prior.sample([GRID])
+            starts = self._z_prior.sample([GRID]).to(device)
+            ends = self._z_prior.sample([GRID]).to(device)
         interpolated_z = torch.cat(
-            [starts[i] + (ends[i] - starts[i]) * torch.linspace(0., 1., GRID).unsqueeze(-1) for i in range(GRID)])
+            [starts[i] + (ends[i] - starts[i]) * torch.linspace(0., 1., GRID, device=device).unsqueeze(-1) for i in range(GRID)])
         interpolated_images = self.generator(interpolated_z, training=False)
 
         # Stack the random images, then an empty row, and finally interpolated images
         image = torch.cat([
             torch.cat([torch.cat(list(images), axis=1) for images in torch.chunk(random_images, GRID)], axis=0),
-            torch.zeros([DINOS.H * GRID, DINOS.W, DINOS.C]),
+            torch.zeros([DINOS.H * GRID, DINOS.W, DINOS.C], device=device),
             torch.cat([torch.cat(list(images), axis=1) for images in torch.chunk(interpolated_images, GRID)], axis=0),
         ], axis=1)
 
