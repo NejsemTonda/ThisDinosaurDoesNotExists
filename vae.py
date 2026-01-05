@@ -17,18 +17,16 @@ from torch.utils.data._utils.collate import default_collate
 from dinos import DINOS
 
 parser = argparse.ArgumentParser()
-# These arguments will be set appropriately by ReCodEx, even if you change them.
+
 parser.add_argument("--batch_size", default=50, type=int, help="Batch size.")
-parser.add_argument("--dataset", default="dataset", type=str, help="MNIST-like dataset to use.")
+parser.add_argument("--dataset", default="dataset", type=str, help="Dataset to use.")
 parser.add_argument("--decoder_layers", default=[500, 500], type=int, nargs="+", help="Decoder layers.")
 parser.add_argument("--encoder_layers", default=[500, 500], type=int, nargs="+", help="Encoder layers.")
 parser.add_argument("--epochs", default=1, type=int, help="Number of epochs.")
-parser.add_argument("--recodex", default=False, action="store_true", help="Evaluation in ReCodEx.")
 parser.add_argument("--seed", default=42, type=int, help="Random seed.")
 parser.add_argument("--threads", default=1, type=int, help="Maximum number of threads to use.")
-parser.add_argument("--train_size", default=None, type=int, help="Limit on the train set size.")
 parser.add_argument("--z_dim", default=100, type=int, help="Dimension of Z.")
-# If you add more arguments, ReCodEx will keep them with your default values.
+
 parser.add_argument("--generate_images", default=False, type=bool, help="Generate images instead of training.")
 parser.add_argument("--num_generate", default=1, type=int, help="How many images to generate.")
 parser.add_argument("--save_model", default=True, type=bool, help="Save model to appropriate path.")
@@ -56,14 +54,6 @@ class VAE(keras.Model):
         self._z_dim = args.z_dim
         self._z_prior = torch.distributions.Normal(torch.zeros(args.z_dim), torch.ones(args.z_dim))
 
-        # TODO: Define `self.encoder` as a `keras.Model`, which
-        # - takes input images with shape `[MNIST.H, MNIST.W, MNIST.C]`
-        # - flattens them
-        # - applies `len(args.encoder_layers)` dense layers with ReLU activation,
-        #   i-th layer with `args.encoder_layers[i]` units
-        # - generates two outputs `z_mean` and `z_sd`, each passing the result
-        #   of the above bullet through its own dense layer of `args.z_dim` units,
-        #   with `z_sd` using exponential function as activation to keep it positive.
         inputs = keras.layers.Input([DINOS.H, DINOS.W, DINOS.C])
         hidden = keras.layers.Flatten()(inputs)
         for l in args.encoder_layers:
@@ -75,13 +65,6 @@ class VAE(keras.Model):
         self.encoder = keras.Model(inputs=inputs, outputs=(z_mean, z_log_sd))
          
 
-        # TODO: Define `self.decoder` as a `keras.Model`, which
-        # - takes vectors of `[args.z_dim]` shape on input
-        # - applies `len(args.decoder_layers)` dense layers with ReLU activation,
-        #   i-th layer with `args.decoder_layers[i]` units
-        # - applies output dense layer with `MNIST.H * MNIST.W * MNIST.C` units
-        #   and a suitable output activation
-        # - reshapes the output (`keras.layers.Reshape`) to `[MNIST.H, MNIST.W, MNIST.C]`
         decoder_input = keras.layers.Input([args.z_dim])
         hidden2 = decoder_input
         for l in args.decoder_layers:
@@ -189,7 +172,7 @@ def load_model(model: VAE, path: str):
     model.encoder.load_state_dict(checkpoint["encoder"])
     model.decoder.load_state_dict(checkpoint["decoder"])
 
-def main(args: argparse.Namespace) -> float:
+def main(args: argparse.Namespace):
     # Set the random seed and the number of threads.
     keras.utils.set_random_seed(args.seed)
     if args.threads:
@@ -200,9 +183,12 @@ def main(args: argparse.Namespace) -> float:
     network = VAE(args)
     network.compile(optimizer=keras.optimizers.Adam())
 
+    args_to_be_mentioned = ["batch_size","dataset", "decoder_layers", "encoder_layers", "z_dim"]
+
     model_dir = os.path.join("models", "vae", "{}-{}".format(
         os.path.basename(globals().get("__file__", "notebook")),
-        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items())))
+        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v)
+                  for k, v in sorted(filter(lambda kv: kv[0] in args_to_be_mentioned, vars(args).items()))))
     ))
     model_path = os.path.join(model_dir, "vae_model.pt")
 
@@ -213,7 +199,7 @@ def main(args: argparse.Namespace) -> float:
         else:
             print(f"No file to resume learning from.")
 
-    # If generation mode → load and generate
+    # If generation mode -> load and generate
     if args.generate_images:
 
         # model_path = os.path.join("models", "vae", "vae_model.pt")
@@ -228,13 +214,14 @@ def main(args: argparse.Namespace) -> float:
         for img in images:
             plt.imshow(img)
             plt.show()
-        return 0.0
+        return
 
     # Create logdir name
     args.logdir = os.path.join("logs", "{}-{}-{}".format(
         os.path.basename(globals().get("__file__", "notebook")),
         datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
-        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items())))
+        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v)
+                  for k, v in sorted(filter(lambda kv: kv[0] in args_to_be_mentioned, vars(args).items()))))
     ))
 
     # Load data
@@ -253,11 +240,8 @@ def main(args: argparse.Namespace) -> float:
     if not os.path.exists("./logs"):
         os.makedirs("./logs")
 
-    with open("{args.logdir}.pkl", "wb") as log_file:
+    with open(f"{args.logdir}.pkl", "wb") as log_file:
         pickle.dump(logs.history, log_file)
- 
-    # Return loss for ReCodEx to validate
-    return logs.history["loss"][-1]
 
 
 if __name__ == "__main__":

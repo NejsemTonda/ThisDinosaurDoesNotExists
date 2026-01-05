@@ -15,16 +15,14 @@ torch.set_default_dtype(torch.float16)
 from dinos import DINOS
 
 parser = argparse.ArgumentParser()
-# These arguments will be set appropriately by ReCodEx, even if you change them.
+
 parser.add_argument("--batch_size", default=50, type=int, help="Batch size.")
-parser.add_argument("--dataset", default="dataset", type=str, help="MNIST-like dataset to use.")
+parser.add_argument("--dataset", default="dataset", type=str, help="Dataset to use.")
 parser.add_argument("--epochs", default=1, type=int, help="Number of epochs.")
-parser.add_argument("--recodex", default=False, action="store_true", help="Evaluation in ReCodEx.")
 parser.add_argument("--seed", default=42, type=int, help="Random seed.")
 parser.add_argument("--threads", default=1, type=int, help="Maximum number of threads to use.")
-parser.add_argument("--train_size", default=None, type=int, help="Limit on the train set size.")
 parser.add_argument("--z_dim", default=100, type=int, help="Dimension of Z.")
-# If you add more arguments, ReCodEx will keep them with your default values.
+
 parser.add_argument("--generate_images", default=False, type=bool, help="Path to saved generator model.")
 parser.add_argument("--num_generate", default=1, type=int, help="Number of images to generate.")
 parser.add_argument("--save_model", default=True, type=bool, help="Indicator, whether the model should be saved.")
@@ -41,17 +39,6 @@ class GAN(keras.Model):
         self._z_dim = args.z_dim
         self._z_prior = torch.distributions.Normal(torch.zeros(args.z_dim), torch.ones(args.z_dim))
 
-        # TODO: Define `self.generator` as a `keras.Model`, which
-        # - takes vectors of shape `[args.z_dim]` on input
-        # - applies batch normalized dense layer with 1_024 units and ReLU
-        # - applies batch normalized dense layer with `MNIST.H // 4 * MNIST.W // 4 * 64` units and ReLU
-        # - reshapes the current hidden output to `[MNIST.H // 4, MNIST.W // 4, 64]`
-        # - applies batch normalized transposed convolution with 32 filters, kernel size 4,
-        #   stride 2, same padding, and ReLU activation
-        # - applies transposed convolution with `MNIST.C` filters, kernel size 4,
-        #   stride 2, same padding, and a suitable output activation
-        # Note that on the lecture, we discussed that layers before batch normalization should
-        # not use bias -- but for simplicity, do not do it here (so do not set `use_bias=False`).
         inputs_generator = keras.layers.Input([args.z_dim])
 
         hidden_generator = keras.layers.Dense(1024)(inputs_generator)
@@ -72,17 +59,6 @@ class GAN(keras.Model):
 
         self.generator = keras.Model(inputs=inputs_generator, outputs=outputs_generator)
 
-        # TODO: Define `self.discriminator` as a `keras.Model`, which
-        # - takes input images with shape `[MNIST.H, MNIST.W, MNIST.C]`
-        # - computes batch normalized convolution with 32 filters, kernel size 5,
-        #   same padding, and ReLU activation.
-        # - max-pools with pool size 2 and stride 2
-        # - computes batch normalized convolution with 64 filters, kernel size 5,
-        #   same padding, and ReLU activation
-        # - max-pools with pool size 2 and stride 2
-        # - flattens the current representation
-        # - applies batch normalized dense layer with 1_024 units and ReLU activation
-        # - applies output dense layer with one output and a suitable activation function
         inputs_discriminator = keras.layers.Input([DINOS.H, DINOS.W, DINOS.C])
 
         hidden_discriminator = keras.layers.Conv2D(32, 5, padding='same')(inputs_discriminator)
@@ -121,16 +97,6 @@ class GAN(keras.Model):
         self.built = True
 
     def train_step(self, images: torch.Tensor) -> dict[str, torch.Tensor]:
-        # TODO(gan): Generator training.
-        # - generate as many random latent samples as there are `images`, by a single call
-        #   to `self._z_prior.sample`;
-        # - pass the samples through a generator; do not forget about `training=True`
-        # - run discriminator on the generated images, also using `training=True` (even if
-        #   not updating discriminator parameters, we want to perform possible BatchNormalization in it)
-        # - compute `generator_loss` using `self.loss`, with ones as target labels
-        #   (`torch.ones_like` might come handy).
-        # Then, run an optimizer step with respect to generator trainable variables.
-        # Do not forget that we created `generator_optimizer` in the `compile` override.
         self.generator.zero_grad()
         z = self._z_prior.sample([images.shape[0]])
         pred_imgs = self.generator(z, training=True)
@@ -143,17 +109,6 @@ class GAN(keras.Model):
         self.generator_optimizer.apply_gradients(zip(generator_grads, self.generator.trainable_variables))
 
 
-
-        # TODO(gan): Discriminator training. Using a Gradient tape:
-        # - discriminate `images` with `training=True`, storing
-        #   results in `discriminated_real`
-        # - discriminate images generated in generator training with `training=True`,
-        #   storing results in `discriminated_fake`
-        # - compute `discriminator_loss` by summing
-        #   - `self.loss` on `discriminated_real` with suitable targets,
-        #   - `self.loss` on `discriminated_fake` with suitable targets.
-        # Then, run an optimizer step with respect to discriminator trainable variables.
-        # Do not forget that we created `discriminator_optimizer` in the `compile` override.
         self.discriminator.zero_grad()
         discriminated_real = self.discriminator(images, training=True)
         discriminated_fake = self.discriminator(pred_imgs.detach(), training=True)
@@ -167,14 +122,8 @@ class GAN(keras.Model):
         discriminator_grads = [var.value.grad for var in self.discriminator.trainable_variables]
         self.discriminator_optimizer.apply_gradients(zip(discriminator_grads, self.discriminator.trainable_variables))
         
-
-        # TODO(gan): Update the discriminator accuracy metric -- call the
-        # `self.metric` twice, with the same arguments the `self.loss`
-        # was called during discriminator loss computation.
         self.metric(torch.ones_like(discriminated_real), discriminated_real)
         self.metric(torch.zeros_like(discriminated_fake), discriminated_fake)
-
-
 
         self._loss_tracker.update_state(discriminator_loss + generator_loss)
         return {
@@ -232,10 +181,14 @@ def load_checkpoint(network: GAN, path: str):
     network.discriminator.load_state_dict(checkpoint["discriminator"])
 
 
-def main(args: argparse.Namespace) -> dict[str, float]:
+def main(args: argparse.Namespace):
+
+    args_to_be_mentioned = ["batch_size","dataset", "z_dim"]
+
     model_dir = os.path.join("models", "dcgan", "{}-{}".format(
         os.path.basename(globals().get("__file__", "notebook")),
-        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items())))
+        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v)
+                  for k, v in sorted(filter(lambda kv: kv[0] in args_to_be_mentioned, vars(args).items()))))
     ))
 
     if args.generate_images:
@@ -247,7 +200,7 @@ def main(args: argparse.Namespace) -> dict[str, float]:
             plt.imshow(img)
             plt.show()
         print(f"Generated images shape: {imgs.shape}")
-        return {}
+        return
     # Set the random seed and the number of threads.
     keras.utils.set_random_seed(args.seed)
     if args.threads:
@@ -258,7 +211,8 @@ def main(args: argparse.Namespace) -> dict[str, float]:
     args.logdir = os.path.join("logs", "{}-{}-{}".format(
         os.path.basename(globals().get("__file__", "notebook")),
         datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
-        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items())))
+        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v)
+                  for k, v in sorted(filter(lambda kv: kv[0] in args_to_be_mentioned, vars(args).items()))))
     ))
 
     # Load data
@@ -304,9 +258,6 @@ def main(args: argparse.Namespace) -> dict[str, float]:
 
         print(f"Generator saved to {generator_path}")
         print(f"Checkpoint saved to {checkpoint_path}")
-
-    # Return the loss and the discriminator accuracy for ReCodEx to validate.
-    return {metric: logs.history[metric][-1] for metric in ["loss", "discriminator_accuracy"]}
 
 
 if __name__ == "__main__":
