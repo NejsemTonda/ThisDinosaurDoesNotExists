@@ -272,8 +272,11 @@ def main(args: argparse.Namespace) -> dict[str, float]:
 
     if args.resume_training:
         resume_from = os.path.join(model_dir, "dcgan_model.pt")
-        print(f"Resuming training from {resume_from}")
-        load_checkpoint(network, resume_from)
+        if os.path.exists(resume_from):
+            print(f"Resuming training from {resume_from}")
+            load_checkpoint(network, resume_from)
+        else:
+            print(f"No file to resume learning from.")
 
     logs = network.fit(train, epochs=args.epochs, callbacks=[keras.callbacks.LambdaCallback(on_epoch_end=network.generate)])
 

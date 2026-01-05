@@ -206,8 +206,11 @@ def main(args: argparse.Namespace) -> float:
     model_path = os.path.join(model_dir, "vae_model.pt")
 
     if args.resume_training:
-        print(f"Resuming training from {model_path}")
-        load_model(network, model_path)
+        if os.path.exists(model_path):
+            print(f"Resuming training from {model_path}")
+            load_model(network, model_path)
+        else:
+            print(f"No file to resume learning from.")
 
     # If generation mode → load and generate
     if args.generate_images:
