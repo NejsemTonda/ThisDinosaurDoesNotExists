@@ -237,6 +237,7 @@ def main(args: argparse.Namespace) -> dict[str, float]:
 
     if args.generate_images:
         generator_path = os.path.join(model_dir, "generator.keras")
+        # generator_path = os.path.join("models", "dcgan", "generator.keras")
         imgs = load_generator_and_generate(generator_path, args.num_generate, args.z_dim)
         imgs = imgs.detach().numpy()
         for img in imgs:

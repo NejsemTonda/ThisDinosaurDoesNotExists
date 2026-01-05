@@ -214,6 +214,8 @@ def main(args: argparse.Namespace) -> float:
 
     # If generation mode → load and generate
     if args.generate_images:
+
+        # model_path = os.path.join("models", "vae", "vae_model.pt")
         print(f"Loading model from {model_path}")
         load_model(network, model_path)
 
