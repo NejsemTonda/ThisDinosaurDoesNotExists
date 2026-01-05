@@ -17,17 +17,17 @@ parser = argparse.ArgumentParser()
 # These arguments will be set appropriately by ReCodEx, even if you change them.
 parser.add_argument("--batch_size", default=50, type=int, help="Batch size.")
 parser.add_argument("--dataset", default="dataset", type=str, help="MNIST-like dataset to use.")
-parser.add_argument("--epochs", default=50, type=int, help="Number of epochs.")
+parser.add_argument("--epochs", default=1, type=int, help="Number of epochs.")
 parser.add_argument("--recodex", default=False, action="store_true", help="Evaluation in ReCodEx.")
 parser.add_argument("--seed", default=42, type=int, help="Random seed.")
 parser.add_argument("--threads", default=1, type=int, help="Maximum number of threads to use.")
 parser.add_argument("--train_size", default=None, type=int, help="Limit on the train set size.")
 parser.add_argument("--z_dim", default=100, type=int, help="Dimension of Z.")
 # If you add more arguments, ReCodEx will keep them with your default values.
-parser.add_argument("--generate_from", default=None, type=str, help="Path to saved generator model.")
+parser.add_argument("--generate_images", default=False, type=bool, help="Path to saved generator model.")
 parser.add_argument("--num_generate", default=1, type=int, help="Number of images to generate.")
-parser.add_argument("--save_to_dir", default=None, type=str, help="Indicator, whether the model should be saved.")
-parser.add_argument("--resume_from", default=None, type=str, help="Path to checkpoint to continue training from.")
+parser.add_argument("--save_model", default=True, type=bool, help="Indicator, whether the model should be saved.")
+parser.add_argument("--resume_training", default=False, type=bool, help="Path to checkpoint to continue training from.")
 
 # The GAN model
 class GAN(keras.Model):
@@ -228,12 +228,20 @@ def load_checkpoint(network: GAN, path: str):
     network.generator.load_state_dict(checkpoint["generator"])
     network.discriminator.load_state_dict(checkpoint["discriminator"])
 
+
 def main(args: argparse.Namespace) -> dict[str, float]:
-    if args.generate_from is not None:
-        imgs = load_generator_and_generate(args.generate_from, args.num_generate, args.z_dim)
-        img = imgs.detach().numpy()[0]
-        plt.imshow(img)
-        plt.show()
+    model_dir = os.path.join("models", "dcgan", "{}-{}".format(
+        os.path.basename(globals().get("__file__", "notebook")),
+        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items())))
+    ))
+
+    if args.generate_images:
+        generator_path = os.path.join(model_dir, "generator.keras")
+        imgs = load_generator_and_generate(generator_path, args.num_generate, args.z_dim)
+        imgs = imgs.detach().numpy()
+        for img in imgs:
+            plt.imshow(img)
+            plt.show()
         print(f"Generated images shape: {imgs.shape}")
         return {}
     # Set the random seed and the number of threads.
@@ -262,18 +270,19 @@ def main(args: argparse.Namespace) -> dict[str, float]:
         metric=keras.metrics.BinaryAccuracy("discriminator_accuracy"),
     )
 
-    if args.resume_from is not None:
-        print(f"Resuming training from {args.resume_from}")
-        load_checkpoint(network, args.resume_from)
+    if args.resume_training:
+        resume_from = os.path.join(model_dir, "dcgan_model.pt")
+        print(f"Resuming training from {resume_from}")
+        load_checkpoint(network, resume_from)
 
     logs = network.fit(train, epochs=args.epochs, callbacks=[keras.callbacks.LambdaCallback(on_epoch_end=network.generate)])
 
     # Save trained generator model
-    if args.save_to_dir is not None:
-        os.makedirs(args.save_to_dir, exist_ok=True)
+    if args.save_model:
+        os.makedirs(model_dir, exist_ok=True)
 
-        generator_path = os.path.join(args.save_to_dir, "generator.keras")
-        checkpoint_path = os.path.join(args.save_to_dir, "checkpoint.pt")
+        generator_path = os.path.join(model_dir, "generator.keras")
+        checkpoint_path = os.path.join(model_dir, "dcgan_model.pt")
 
         network.generator.save(generator_path)
         save_checkpoint(network, checkpoint_path)

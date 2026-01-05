@@ -28,10 +28,10 @@ parser.add_argument("--threads", default=1, type=int, help="Maximum number of th
 parser.add_argument("--train_size", default=None, type=int, help="Limit on the train set size.")
 parser.add_argument("--z_dim", default=100, type=int, help="Dimension of Z.")
 # If you add more arguments, ReCodEx will keep them with your default values.
-parser.add_argument("--generate_from", default=None, type=str, help="Generate images instead of training.")
+parser.add_argument("--generate_images", default=False, type=bool, help="Generate images instead of training.")
 parser.add_argument("--num_generate", default=1, type=int, help="How many images to generate.")
-parser.add_argument("--save_to_dir", default=None, type=str, help="Path to save/load the model.")
-parser.add_argument("--resume_from", default=None, type=str, help="Path to saved VAE checkpoint to continue training from.")
+parser.add_argument("--save_model", default=True, type=bool, help="Save model to appropriate path.")
+parser.add_argument("--resume_training", default=False, type=bool, help="Use VAE checkpoint to continue training from it.")
 
 
 
@@ -199,24 +199,29 @@ def main(args: argparse.Namespace) -> float:
     network = VAE(args)
     network.compile(optimizer=keras.optimizers.Adam())
 
-    if args.resume_from is not None:
-        print(f"Resuming training from {args.resume_from}")
-        load_model(network, args.resume_from)
+    model_dir = os.path.join("models", "vae", "{}-{}".format(
+        os.path.basename(globals().get("__file__", "notebook")),
+        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items())))
+    ))
+    model_path = os.path.join(model_dir, "vae_model.pt")
+
+    if args.resume_training:
+        print(f"Resuming training from {model_path}")
+        load_model(network, model_path)
 
     # If generation mode → load and generate
-    if args.generate_from is not None:
-        print(f"Loading model from {args.generate_from}")
-        load_model(network, args.generate_from)
+    if args.generate_images:
+        print(f"Loading model from {model_path}")
+        load_model(network, model_path)
 
         with torch.no_grad():
             z = torch.randn(args.num_generate, args.z_dim)
             images = network.decoder(z, training=False)
 
         images = images.cpu().numpy()
-        plt.imshow(images[0])
-        plt.show()
-        # np.save(args.output, images)
-        # print(f"Generated {args.num_generate} images → saved to {args.output}")
+        for img in images:
+            plt.imshow(img)
+            plt.show()
         return 0.0
 
     # Create logdir name
@@ -234,11 +239,11 @@ def main(args: argparse.Namespace) -> float:
 
     logs = network.fit(train, epochs=args.epochs)
 
-    if args.save_to_dir is not None:
-        os.makedirs(args.save_to_dir, exist_ok=True)
-        generator_path = os.path.join(args.save_to_dir, "vae_model.pt")
-        print(f"Saving model to {generator_path}")
-        save_model(network, generator_path)
+
+    if args.save_model:
+        os.makedirs(model_dir, exist_ok=True)
+        print(f"Saving model to {model_path}")
+        save_model(network, model_path)
 
     # Return loss for ReCodEx to validate
     return logs.history["loss"][-1]
