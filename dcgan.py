@@ -3,6 +3,7 @@ import argparse
 import datetime
 import os
 import re
+import pickle
 import matplotlib.pyplot as plt
 os.environ.setdefault("KERAS_BACKEND", "torch")
 
@@ -28,6 +29,8 @@ parser.add_argument("--generate_images", default=False, type=bool, help="Path to
 parser.add_argument("--num_generate", default=1, type=int, help="Number of images to generate.")
 parser.add_argument("--save_model", default=True, type=bool, help="Indicator, whether the model should be saved.")
 parser.add_argument("--resume_training", default=False, type=bool, help="Path to checkpoint to continue training from.")
+
+
 
 # The GAN model
 class GAN(keras.Model):
@@ -261,6 +264,7 @@ def main(args: argparse.Namespace) -> dict[str, float]:
     dinos = DINOS(args.dataset)
     train = torch.utils.data.DataLoader(dinos, batch_size=args.batch_size, shuffle=True)
 
+
     # Create the network and train
     network = GAN(args)
     network.compile(
@@ -278,7 +282,14 @@ def main(args: argparse.Namespace) -> dict[str, float]:
         else:
             print(f"No file to resume learning from.")
 
-    logs = network.fit(train, epochs=args.epochs, callbacks=[keras.callbacks.LambdaCallback(on_epoch_end=network.generate)])
+    logs = network.fit(train, epochs=args.epochs)
+
+    if not os.path.exists("./logs"):
+        os.makedirs("./logs")
+
+    with open(f"{args.logdir}.pkl", "wb") as log_file:
+        pickle.dump(logs.history, log_file)
+    
 
     # Save trained generator model
     if args.save_model:

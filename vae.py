@@ -3,6 +3,7 @@ import argparse
 import datetime
 import os
 import re
+import pickle
 os.environ.setdefault("KERAS_BACKEND", "torch")  # Use PyTorch backend unless specified otherwise
 
 import keras
@@ -242,12 +243,17 @@ def main(args: argparse.Namespace) -> float:
 
     logs = network.fit(train, epochs=args.epochs)
 
-
     if args.save_model:
         os.makedirs(model_dir, exist_ok=True)
         print(f"Saving model to {model_path}")
         save_model(network, model_path)
 
+    if not os.path.exists("./logs"):
+        os.makedirs("./logs")
+
+    with open("{args.logdir}.pkl", "wb") as log_file:
+        pickle.dump(logs.history, log_file)
+ 
     # Return loss for ReCodEx to validate
     return logs.history["loss"][-1]
 
