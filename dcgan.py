@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 os.environ.setdefault("KERAS_BACKEND", "torch")
 
 import keras
+from tensorflow.keras.callbacks import TensorBoard
 import numpy as np
 import torch
 torch.set_default_dtype(torch.float16)
@@ -28,6 +29,12 @@ parser.add_argument("--generate_from", default=None, type=str, help="Path to sav
 parser.add_argument("--num_generate", default=1, type=int, help="Number of images to generate.")
 parser.add_argument("--save_to_dir", default=None, type=str, help="Indicator, whether the model should be saved.")
 parser.add_argument("--resume_from", default=None, type=str, help="Path to checkpoint to continue training from.")
+
+
+
+log_dir = "runs/keras_exp1"
+
+
 
 # The GAN model
 class GAN(keras.Model):
@@ -253,6 +260,7 @@ def main(args: argparse.Namespace) -> dict[str, float]:
     dinos = DINOS(args.dataset)
     train = torch.utils.data.DataLoader(dinos, batch_size=args.batch_size, shuffle=True)
 
+
     # Create the network and train
     network = GAN(args)
     network.compile(
@@ -266,7 +274,8 @@ def main(args: argparse.Namespace) -> dict[str, float]:
         print(f"Resuming training from {args.resume_from}")
         load_checkpoint(network, args.resume_from)
 
-    logs = network.fit(train, epochs=args.epochs, callbacks=[keras.callbacks.LambdaCallback(on_epoch_end=network.generate)])
+    tb = TensorBoard(log_dir=args.logdir)
+    logs = network.fit(train, epochs=args.epochs, callbacks=[tb])
 
     # Save trained generator model
     if args.save_to_dir is not None:
