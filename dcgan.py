@@ -3,11 +3,11 @@ import argparse
 import datetime
 import os
 import re
+import pickle
 import matplotlib.pyplot as plt
 os.environ.setdefault("KERAS_BACKEND", "torch")
 
 import keras
-from tensorflow.keras.callbacks import TensorBoard
 import numpy as np
 import torch
 torch.set_default_dtype(torch.float16)
@@ -29,10 +29,6 @@ parser.add_argument("--generate_from", default=None, type=str, help="Path to sav
 parser.add_argument("--num_generate", default=1, type=int, help="Number of images to generate.")
 parser.add_argument("--save_to_dir", default=None, type=str, help="Indicator, whether the model should be saved.")
 parser.add_argument("--resume_from", default=None, type=str, help="Path to checkpoint to continue training from.")
-
-
-
-log_dir = "runs/keras_exp1"
 
 
 
@@ -274,8 +270,14 @@ def main(args: argparse.Namespace) -> dict[str, float]:
         print(f"Resuming training from {args.resume_from}")
         load_checkpoint(network, args.resume_from)
 
-    tb = TensorBoard(log_dir=args.logdir)
-    logs = network.fit(train, epochs=args.epochs, callbacks=[tb])
+    logs = network.fit(train, epochs=args.epochs)
+
+    if not os.path.exists("./logs"):
+        os.makedirs("./logs")
+
+    with open(f"{args.logdir}.pkl", "wb") as log_file:
+        pickle.dump(logs.history, log_file)
+    
 
     # Save trained generator model
     if args.save_to_dir is not None:
