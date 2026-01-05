@@ -13,6 +13,7 @@ DATASETS = [
     ("larserikrisholm/dinosaur-image-dataset-15-species", "dino15"),
     ("cmglonly/simple-dinosurus-dataset", "simple"),  # from: https://www.kaggle.com/datasets/cmglonly/simple-dinosurus-dataset
     ("antaresl/jurassic-park-dinosaurs-dataset", "jurassic-park"),
+    ("caokhoihuynh/jurassic-world-dinosaur", "jurassic-world")
 ]
 
 IMG_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"}
