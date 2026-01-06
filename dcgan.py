@@ -211,7 +211,7 @@ def main(args: argparse.Namespace):
     args.logdir = os.path.join("logs", "{}-{}-{}".format(
         os.path.basename(globals().get("__file__", "notebook")),
         datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
-        "_".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v)
+        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v)
                   for k, v in sorted(filter(lambda kv: kv[0] in args_to_be_mentioned, vars(args).items()))))
     ))
 
