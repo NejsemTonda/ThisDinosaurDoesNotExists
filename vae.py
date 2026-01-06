@@ -187,7 +187,7 @@ def main(args: argparse.Namespace):
 
     model_dir = os.path.join("models", "vae", "{}-{}".format(
         os.path.basename(globals().get("__file__", "notebook")),
-        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v)
+        "_".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v)
                   for k, v in sorted(filter(lambda kv: kv[0] in args_to_be_mentioned, vars(args).items()))))
     ))
     model_path = os.path.join(model_dir, "vae_model.pt")
