@@ -190,11 +190,11 @@ def main(args: argparse.Namespace):
         ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v)
                   for k, v in sorted(filter(lambda kv: kv[0] in args_to_be_mentioned, vars(args).items()))))
     ))
-    model_path = os.path.join(model_dir, "vae_model_1.pt")
 
     # If generation mode -> load and generate
     if args.generate_images:
 
+        model_path = os.path.join(model_dir, "vae_model_1.pt")
         # model_path = os.path.join("models", "vae", "vae_model.pt")
         print(f"Loading model from {model_path}")
         load_model(network, model_path)
@@ -209,7 +209,9 @@ def main(args: argparse.Namespace):
             plt.show()
         return
 
+    model_path = os.path.join(model_dir, "vae_model.pt")
     if args.resume_training:
+
         if os.path.exists(model_path):
             print(f"Resuming training from {model_path}")
             load_model(network, model_path)
