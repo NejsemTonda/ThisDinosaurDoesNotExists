@@ -26,7 +26,7 @@ parser.add_argument("--z_dim", default=100, type=int, help="Dimension of Z.")
 parser.add_argument("--generate_images", default=False, type=bool, help="Path to saved generator model.")
 parser.add_argument("--num_generate", default=1, type=int, help="Number of images to generate.")
 parser.add_argument("--save_model", default=True, type=bool, help="Indicator, whether the model should be saved.")
-parser.add_argument("--resume_training", default=False, type=bool, help="Path to checkpoint to continue training from.")
+parser.add_argument("--resume_training", default=False, type=bool, help="Path to model to continue training from.")
 
 
 
@@ -160,29 +160,19 @@ class GAN(keras.Model):
             torch.cat([torch.cat(list(images), axis=1) for images in torch.chunk(interpolated_images, GRID)], axis=0),
         ], axis=1)
 
-def load_generator_and_generate(path: str, num_images: int, z_dim: int):
-    generator = keras.models.load_model(path)
-
-    z = torch.randn([num_images, z_dim])
-    images = generator(z, training=False)
-
-    return images
-
-def save_checkpoint(network: GAN, path: str):
+def save_model(network: GAN, path: str):
     torch.save({
         "generator": network.generator.state_dict(),
         "discriminator": network.discriminator.state_dict(),
     }, path)
 
-
-def load_checkpoint(network: GAN, path: str):
-    checkpoint = torch.load(path, map_location="cpu")
-    network.generator.load_state_dict(checkpoint["generator"])
-    network.discriminator.load_state_dict(checkpoint["discriminator"])
+def load_model(network: GAN, path: str):
+    model = torch.load(path, map_location="cpu")
+    network.generator.load_state_dict(model["generator"])
+    network.discriminator.load_state_dict(model["discriminator"])
 
 
 def main(args: argparse.Namespace):
-
     args_to_be_mentioned = ["batch_size","dataset", "z_dim"]
 
     model_dir = os.path.join("models", "dcgan", "{}-{}".format(
@@ -191,16 +181,6 @@ def main(args: argparse.Namespace):
                   for k, v in sorted(filter(lambda kv: kv[0] in args_to_be_mentioned, vars(args).items()))))
     ))
 
-    if args.generate_images:
-        generator_path = os.path.join(model_dir, "generator.keras")
-        # generator_path = os.path.join("models", "dcgan", "generator.keras")
-        imgs = load_generator_and_generate(generator_path, args.num_generate, args.z_dim)
-        imgs = imgs.detach().numpy()
-        for img in imgs:
-            plt.imshow(img)
-            plt.show()
-        print(f"Generated images shape: {imgs.shape}")
-        return
     # Set the random seed and the number of threads.
     keras.utils.set_random_seed(args.seed)
     if args.threads:
@@ -219,7 +199,6 @@ def main(args: argparse.Namespace):
     dinos = DINOS(args.dataset)
     train = torch.utils.data.DataLoader(dinos, batch_size=args.batch_size, shuffle=True)
 
-
     # Create the network and train
     network = GAN(args)
     network.compile(
@@ -229,15 +208,37 @@ def main(args: argparse.Namespace):
         metric=keras.metrics.BinaryAccuracy("discriminator_accuracy"),
     )
 
+    if args.generate_images:
+        model_path = os.path.join(model_dir, "dcgan_model_1.pt")
+        # generator_path = os.path.join("models", "dcgan", "generator.keras")
+        load_model(network, model_path)
+
+        z = torch.randn([args.num_generate, args.z_dim])
+        imgs = network.generator(z, training=False)
+
+        imgs = imgs.detach().numpy()
+        for img in imgs:
+            plt.imshow(img)
+            plt.show()
+        print(f"Generated images shape: {imgs.shape}")
+        return
+
     if args.resume_training:
         resume_from = os.path.join(model_dir, "dcgan_model.pt")
         if os.path.exists(resume_from):
             print(f"Resuming training from {resume_from}")
-            load_checkpoint(network, resume_from)
+            load_model(network, resume_from)
         else:
             print(f"No file to resume learning from.")
 
     logs = network.fit(train, epochs=args.epochs)
+
+    # Save trained generator model
+    if args.save_model:
+        os.makedirs(model_dir, exist_ok=True)
+        model_path = os.path.join(model_dir, "dcgan_model.pt")
+        save_model(network, model_path)
+        print(f"Model saved to {model_path}")
 
     if not os.path.exists("./logs"):
         os.makedirs("./logs")
@@ -246,18 +247,6 @@ def main(args: argparse.Namespace):
         pickle.dump(logs.history, log_file)
     
 
-    # Save trained generator model
-    if args.save_model:
-        os.makedirs(model_dir, exist_ok=True)
-
-        generator_path = os.path.join(model_dir, "generator.keras")
-        checkpoint_path = os.path.join(model_dir, "dcgan_model.pt")
-
-        network.generator.save(generator_path)
-        save_checkpoint(network, checkpoint_path)
-
-        print(f"Generator saved to {generator_path}")
-        print(f"Checkpoint saved to {checkpoint_path}")
 
 
 if __name__ == "__main__":

@@ -190,14 +190,7 @@ def main(args: argparse.Namespace):
         ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v)
                   for k, v in sorted(filter(lambda kv: kv[0] in args_to_be_mentioned, vars(args).items()))))
     ))
-    model_path = os.path.join(model_dir, "vae_model.pt")
-
-    if args.resume_training:
-        if os.path.exists(model_path):
-            print(f"Resuming training from {model_path}")
-            load_model(network, model_path)
-        else:
-            print(f"No file to resume learning from.")
+    model_path = os.path.join(model_dir, "vae_model_1.pt")
 
     # If generation mode -> load and generate
     if args.generate_images:
@@ -215,6 +208,14 @@ def main(args: argparse.Namespace):
             plt.imshow(img)
             plt.show()
         return
+
+    if args.resume_training:
+        if os.path.exists(model_path):
+            print(f"Resuming training from {model_path}")
+            load_model(network, model_path)
+        else:
+            print(f"No file to resume learning from.")
+
 
     # Create logdir name
     args.logdir = os.path.join("logs", "{}-{}-{}".format(
@@ -234,8 +235,8 @@ def main(args: argparse.Namespace):
 
     if args.save_model:
         os.makedirs(model_dir, exist_ok=True)
-        print(f"Saving model to {model_path}")
         save_model(network, model_path)
+        print(f"Model saved to {model_path}")
 
     if not os.path.exists("./logs"):
         os.makedirs("./logs")
