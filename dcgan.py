@@ -22,6 +22,7 @@ parser.add_argument("--epochs", default=1, type=int, help="Number of epochs.")
 parser.add_argument("--seed", default=42, type=int, help="Random seed.")
 parser.add_argument("--threads", default=1, type=int, help="Maximum number of threads to use.")
 parser.add_argument("--z_dim", default=100, type=int, help="Dimension of Z.")
+parser.add_argument("--gen_lr", default=0.001, type=float, help="Learning rate of generator.")
 
 parser.add_argument("--generate_images", default=False, type=bool, help="Path to saved generator model.")
 parser.add_argument("--num_generate", default=1, type=int, help="Number of images to generate.")
@@ -173,7 +174,7 @@ def load_model(network: GAN, path: str):
 
 
 def main(args: argparse.Namespace):
-    args_to_be_mentioned = ["batch_size","dataset", "z_dim"]
+    args_to_be_mentioned = ["batch_size","dataset", "z_dim", "gen_lr"]
 
     model_dir = os.path.join("models", "dcgan", "{}-{}".format(
         os.path.basename(globals().get("__file__", "notebook")),
@@ -203,7 +204,7 @@ def main(args: argparse.Namespace):
     network = GAN(args)
     network.compile(
         discriminator_optimizer=keras.optimizers.Adam(),
-        generator_optimizer=keras.optimizers.Adam(),
+        generator_optimizer=keras.optimizers.Adam(learning_rate=args.gen_lr),
         loss=keras.losses.BinaryCrossentropy(),
         metric=keras.metrics.BinaryAccuracy("discriminator_accuracy"),
     )
