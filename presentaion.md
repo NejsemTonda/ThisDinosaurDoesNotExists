@@ -37,10 +37,7 @@ https://thispersondoesnotexist.com/
 Pro vytvoření trénovacích dat jsme použili https://www.kaggle.com/. Zejména pak:
 
 * https://www.kaggle.com/datasets/larserikrisholm/dinosaur-image-dataset-15-species – 2448 obrázků - 510MB
-* https://www.kaggle.com/datasets/cmglonly/simple-dinosurus-dataset - 200 obrázků - 58MB
-* https://www.kaggle.com/datasets/antaresl/jurassic-park-dinosaurs-dataset - 4364 obrázků - 4GB
-* https://www.kaggle.com/datasets/caokhoihuynh/jurassic-world-dinosaur - 5835 obrázků - 1.6GB
-
+* https://www.kaggle.com/datasets/cmglonly/simple-dinosurus-dataset - 200 obrázků - 58MB https://www.kaggle.com/datasets/antaresl/jurassic-park-dinosaurs-dataset - 4364 obrázků - 4GB https://www.kaggle.com/datasets/caokhoihuynh/jurassic-world-dinosaur - 5835 obrázků - 1.6GB
 # Pre-processing
 
 * Obrázky jsou přeškálované na velikost 256x256 px
@@ -65,7 +62,8 @@ Pro vytvoření trénovacích dat jsme použili https://www.kaggle.com/. Zejmén
 
 # Trénování
 
-![]()
+![z_dim](src/zdim_loss.svg){} { height=\textheight }
+
 
 # Výsledky 
 
