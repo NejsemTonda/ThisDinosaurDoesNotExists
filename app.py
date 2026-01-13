@@ -1,8 +1,36 @@
 from flask import Flask, Response, render_template_string
+from PIL import Image
+import io
+import numpy as np
+import vae
+
+import os
+import torch
+
 
 app = Flask(__name__)
 
-def get_image():
+z_dim = 10
+epoch = 5
+class Arguments:
+    seed = 122
+    encoder_layers = [500, 500]
+    decoder_layers = [500, 500]
+
+    def __init__(self, z_dim):
+        self.z_dim = z_dim
+
+args = Arguments(z_dim)
+model = vae.VAE(args)
+
+model_dir = os.path.join("models", "vae", f"vae.py-bs=100,d=dataset,dl=[500, 500],el=[500, 500],zd={z_dim}")
+model_path = os.path.join(model_dir, f"vae_model_{epoch}.pt")
+
+vae.load_model(model, model_path)
+
+
+
+def get_image_from_dataset():
     """
     For now, just retrun ramdon image until we implement the NN
     """
@@ -24,6 +52,21 @@ def get_image():
     
     with open(filepath, "rb") as f:
         return f.read()
+
+def get_image():
+    with torch.no_grad():
+        z = torch.randn(1, args.z_dim)
+        arr = model.decoder(z, training=False)[0].cpu().numpy()
+
+    if arr.dtype != np.uint8:
+        arr = (arr * 255).clip(0, 255).astype(np.uint8)
+
+    img = Image.fromarray(arr)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return buf.read()
+
 
 @app.route("/")
 def index():
