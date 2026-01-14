@@ -123,8 +123,8 @@ Pro vytvoření trénovacích dat jsme použili https://www.kaggle.com/. Zejmén
 
 | 150 | 50 | 10 | 5 | 2 |
 |--|--|--|--|--|
-| ![](./src/gen_images/vae/vae_150_5_0.png) | ![](./src/gen_images/vae/vae_50_5_13.png) | ![](./src/gen_images/vae/vae_10_5_1.png) | ![](./src/gen_images/vae/vae_5_3_43.png) | ![](./src/gen_images/vae/vae_2_5_6.png) |
-| ![](./src/gen_images/vae/vae_150_5_7.png) | ![](./src/gen_images/vae/vae_50_5_44.png) | ![](./src/gen_images/vae/vae_10_5_45.png) | ![](./src/gen_images/vae/vae_5_3_55.png) | ![](./src/gen_images/vae/vae_2_5_20.png) |
+| ![](./src/gen_images/vae/vae_150_5_0.png) | ![](./src/gen_images/vae/vae_50_5_13.png) | ![](./src/gen_images/vae/vae_10_5_1.png) | ![](./src/gen_images/vae/vae_5_3_43.png) | ![](./src/gen_images/vae/vae_2_4_6.png) |
+| ![](./src/gen_images/vae/vae_150_5_7.png) | ![](./src/gen_images/vae/vae_50_5_44.png) | ![](./src/gen_images/vae/vae_10_5_45.png) | ![](./src/gen_images/vae/vae_5_3_55.png) | ![](./src/gen_images/vae/vae_2_4_20.png) |
 | ![](./src/gen_images/vae/vae_150_5_30.png) | ![](./src/gen_images/vae/vae_50_5_36.png) | ![](./src/gen_images/vae/vae_10_5_58.png) | ![](./src/gen_images/vae/vae_5_3_69.png) | ![](./src/gen_images/vae/vae_2_4_27.png) |
 
 # Výsledky
