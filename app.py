@@ -10,8 +10,8 @@ import torch
 
 app = Flask(__name__)
 
-z_dim = 10
-epoch = 5
+z_dim = 5
+epoch = 2
 class Arguments:
     seed = 122
     encoder_layers = [500, 500]
@@ -55,7 +55,8 @@ def get_image_from_dataset():
 
 def get_image():
     with torch.no_grad():
-        z = torch.randn(1, args.z_dim)
+        # z = torch.randn(1, args.z_dim)
+        z = torch.rand(1, args.z_dim) * 20 - 10
         arr = model.decoder(z, training=False)[0].cpu().numpy()
 
     if arr.dtype != np.uint8:
