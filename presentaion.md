@@ -65,7 +65,7 @@ Pro vytvoření trénovacích dat jsme použili https://www.kaggle.com/. Zejmén
 
 # Trénování
 
-<!-- ![z_dim](src/zdim_loss.svg){ width=11cm }  -->
+![z_dim](src/zdim_loss.svg){ width=11cm } 
 
 # Výsledky 
 
@@ -111,7 +111,7 @@ Pro vytvoření trénovacích dat jsme použili https://www.kaggle.com/. Zejmén
 
 - 240 epoch
 
-| 150 | 50 | 10 | 5 | 2 |
+| 150 | 50 | 10 | 5 (190 epoch) | 2 |
 |--|--|--|--|--|
 | ![](./src/gen_images/vae/vae_150_4_0.png) | ![](./src/gen_images/vae/vae_50_4_13.png) | ![](./src/gen_images/vae/vae_10_4_1.png) | ![](./src/gen_images/vae/vae_5_3_43.png) | ![](./src/gen_images/vae/vae_2_4_6.png) |
 | ![](./src/gen_images/vae/vae_150_4_7.png) | ![](./src/gen_images/vae/vae_50_4_44.png) | ![](./src/gen_images/vae/vae_10_4_45.png) | ![](./src/gen_images/vae/vae_5_3_55.png) | ![](./src/gen_images/vae/vae_2_4_20.png) |
@@ -121,7 +121,7 @@ Pro vytvoření trénovacích dat jsme použili https://www.kaggle.com/. Zejmén
 
 - 288 epoch
 
-| 150 | 50 | 10 | 5 | 2 |
+| 150 | 50 | 10 | 5 (190 epoch) | 2 (240 epoch) |
 |--|--|--|--|--|
 | ![](./src/gen_images/vae/vae_150_5_0.png) | ![](./src/gen_images/vae/vae_50_5_13.png) | ![](./src/gen_images/vae/vae_10_5_1.png) | ![](./src/gen_images/vae/vae_5_3_43.png) | ![](./src/gen_images/vae/vae_2_4_6.png) |
 | ![](./src/gen_images/vae/vae_150_5_7.png) | ![](./src/gen_images/vae/vae_50_5_44.png) | ![](./src/gen_images/vae/vae_10_5_45.png) | ![](./src/gen_images/vae/vae_5_3_55.png) | ![](./src/gen_images/vae/vae_2_4_20.png) |
@@ -129,7 +129,7 @@ Pro vytvoření trénovacích dat jsme použili https://www.kaggle.com/. Zejmén
 
 # Výsledky
 
-![](./latent_grid.png)
+![](./latent_grid.png){ height=8cm }
 
 # Diskuze
 
