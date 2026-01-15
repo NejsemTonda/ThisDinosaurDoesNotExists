@@ -65,7 +65,7 @@ Pro vytvoření trénovacích dat jsme použili https://www.kaggle.com/. Zejmén
 
 # Trénování
 
-<!-- ![z_dim](src/zdim_loss.svg){ width=11cm }  -->
+![z_dim](src/zdim_loss.svg){ width=11cm } 
 
 # Výsledky 
 
