@@ -65,7 +65,7 @@ Pro vytvoření trénovacích dat jsme použili https://www.kaggle.com/. Zejmén
 
 # Trénování
 
-![z_dim](src/zdim_loss.svg){ width=11cm } 
+<!-- ![z_dim](src/zdim_loss.svg){ width=11cm }  -->
 
 # Výsledky 
 
@@ -101,31 +101,31 @@ Pro vytvoření trénovacích dat jsme použili https://www.kaggle.com/. Zejmén
 
 - 192 epoch
 
-| 150 | 50 | 10 | 5 | 2 |
+| 150 | 50 | 10 | 5 (144 ep.) | 2 |
 |--|--|--|--|--|
-| ![](./src/gen_images/vae/vae_150_3_0.png) | ![](./src/gen_images/vae/vae_50_3_13.png) | ![](./src/gen_images/vae/vae_10_3_1.png) | ![](./src/gen_images/vae/vae_5_3_43.png) | ![](./src/gen_images/vae/vae_2_3_6.png) |
-| ![](./src/gen_images/vae/vae_150_3_7.png) | ![](./src/gen_images/vae/vae_50_3_44.png) | ![](./src/gen_images/vae/vae_10_3_45.png) | ![](./src/gen_images/vae/vae_5_3_55.png) | ![](./src/gen_images/vae/vae_2_3_20.png) |
-| ![](./src/gen_images/vae/vae_150_3_30.png) | ![](./src/gen_images/vae/vae_50_3_36.png) | ![](./src/gen_images/vae/vae_10_3_58.png) | ![](./src/gen_images/vae/vae_5_3_69.png) | ![](./src/gen_images/vae/vae_2_3_27.png) |
+| ![](./src/gen_images/vae/vae_150_3_0.png) | ![](./src/gen_images/vae/vae_50_3_13.png) | ![](./src/gen_images/vae/vae_10_3_1.png) | ![](./src/gen_images/vae/vae_5_2_43.png) | ![](./src/gen_images/vae/vae_2_3_6.png) |
+| ![](./src/gen_images/vae/vae_150_3_7.png) | ![](./src/gen_images/vae/vae_50_3_44.png) | ![](./src/gen_images/vae/vae_10_3_45.png) | ![](./src/gen_images/vae/vae_5_2_55.png) | ![](./src/gen_images/vae/vae_2_3_20.png) |
+| ![](./src/gen_images/vae/vae_150_3_30.png) | ![](./src/gen_images/vae/vae_50_3_36.png) | ![](./src/gen_images/vae/vae_10_3_58.png) | ![](./src/gen_images/vae/vae_5_2_69.png) | ![](./src/gen_images/vae/vae_2_3_27.png) |
 
 # Výsledky 
 
 - 240 epoch
 
-| 150 | 50 | 10 | 5 (190 epoch) | 2 |
+| 150 | 50 | 10 | 5 (144 ep.) | 2 |
 |--|--|--|--|--|
-| ![](./src/gen_images/vae/vae_150_4_0.png) | ![](./src/gen_images/vae/vae_50_4_13.png) | ![](./src/gen_images/vae/vae_10_4_1.png) | ![](./src/gen_images/vae/vae_5_3_43.png) | ![](./src/gen_images/vae/vae_2_4_6.png) |
-| ![](./src/gen_images/vae/vae_150_4_7.png) | ![](./src/gen_images/vae/vae_50_4_44.png) | ![](./src/gen_images/vae/vae_10_4_45.png) | ![](./src/gen_images/vae/vae_5_3_55.png) | ![](./src/gen_images/vae/vae_2_4_20.png) |
-| ![](./src/gen_images/vae/vae_150_4_30.png) | ![](./src/gen_images/vae/vae_50_4_36.png) | ![](./src/gen_images/vae/vae_10_4_58.png) | ![](./src/gen_images/vae/vae_5_3_69.png) | ![](./src/gen_images/vae/vae_2_4_27.png) |
+| ![](./src/gen_images/vae/vae_150_4_0.png) | ![](./src/gen_images/vae/vae_50_4_13.png) | ![](./src/gen_images/vae/vae_10_4_1.png) | ![](./src/gen_images/vae/vae_5_2_43.png) | ![](./src/gen_images/vae/vae_2_4_6.png) |
+| ![](./src/gen_images/vae/vae_150_4_7.png) | ![](./src/gen_images/vae/vae_50_4_44.png) | ![](./src/gen_images/vae/vae_10_4_45.png) | ![](./src/gen_images/vae/vae_5_2_55.png) | ![](./src/gen_images/vae/vae_2_4_20.png) |
+| ![](./src/gen_images/vae/vae_150_4_30.png) | ![](./src/gen_images/vae/vae_50_4_36.png) | ![](./src/gen_images/vae/vae_10_4_58.png) | ![](./src/gen_images/vae/vae_5_2_69.png) | ![](./src/gen_images/vae/vae_2_4_27.png) |
 
 # Výsledky 
 
 - 288 epoch
 
-| 150 | 50 | 10 | 5 (190 epoch) | 2 (240 epoch) |
+| 150 | 50 | 10 | 5 (144 ep.) | 2 (240 ep.) |
 |--|--|--|--|--|
-| ![](./src/gen_images/vae/vae_150_5_0.png) | ![](./src/gen_images/vae/vae_50_5_13.png) | ![](./src/gen_images/vae/vae_10_5_1.png) | ![](./src/gen_images/vae/vae_5_3_43.png) | ![](./src/gen_images/vae/vae_2_4_6.png) |
-| ![](./src/gen_images/vae/vae_150_5_7.png) | ![](./src/gen_images/vae/vae_50_5_44.png) | ![](./src/gen_images/vae/vae_10_5_45.png) | ![](./src/gen_images/vae/vae_5_3_55.png) | ![](./src/gen_images/vae/vae_2_4_20.png) |
-| ![](./src/gen_images/vae/vae_150_5_30.png) | ![](./src/gen_images/vae/vae_50_5_36.png) | ![](./src/gen_images/vae/vae_10_5_58.png) | ![](./src/gen_images/vae/vae_5_3_69.png) | ![](./src/gen_images/vae/vae_2_4_27.png) |
+| ![](./src/gen_images/vae/vae_150_5_0.png) | ![](./src/gen_images/vae/vae_50_5_13.png) | ![](./src/gen_images/vae/vae_10_5_1.png) | ![](./src/gen_images/vae/vae_5_2_43.png) | ![](./src/gen_images/vae/vae_2_4_6.png) |
+| ![](./src/gen_images/vae/vae_150_5_7.png) | ![](./src/gen_images/vae/vae_50_5_44.png) | ![](./src/gen_images/vae/vae_10_5_45.png) | ![](./src/gen_images/vae/vae_5_2_55.png) | ![](./src/gen_images/vae/vae_2_4_20.png) |
+| ![](./src/gen_images/vae/vae_150_5_30.png) | ![](./src/gen_images/vae/vae_50_5_36.png) | ![](./src/gen_images/vae/vae_10_5_58.png) | ![](./src/gen_images/vae/vae_5_2_69.png) | ![](./src/gen_images/vae/vae_2_4_27.png) |
 
 # Výsledky
 

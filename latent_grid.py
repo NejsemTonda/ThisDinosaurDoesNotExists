@@ -12,18 +12,19 @@ os.environ.setdefault("KERAS_BACKEND", "torch")
 import torch
 import numpy as np
 from PIL import Image
+import re
 
 from dinos import DINOS
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--grid_size", "-n", default=10, type=int, help="Grid size N (creates NxN images)")
-parser.add_argument("--z_dim", default=100, type=int, help="Latent space dimension (must match model)")
-parser.add_argument("--range", default=3.0, type=float, help="Range for latent space sampling [-range, range]")
-parser.add_argument("--model_path", default=None, type=str, help="Path to VAE model checkpoint")
+parser.add_argument("--grid_size", "-n", default=9, type=int, help="Grid size N (creates NxN images)")
+parser.add_argument("--z_dim", default=2, type=int, help="Latent space dimension (must match model)")
+parser.add_argument("--range", default=10.0, type=float, help="Range for latent space sampling [-range, range]")
+parser.add_argument("--model_path", default="models\\vae\\vae.py-bs=100,d=dataset,dl=[500, 500],el=[500, 500],zd=2\\vae_model_3.pt", type=str, help="Path to VAE model checkpoint")
 parser.add_argument("--output", "-o", default="latent_grid.png", type=str, help="Output PNG filename")
 parser.add_argument("--encoder_layers", default=[500, 500], type=int, nargs="+", help="Encoder layers (must match model)")
 parser.add_argument("--decoder_layers", default=[500, 500], type=int, nargs="+", help="Decoder layers (must match model)")
-parser.add_argument("--seed", default=42, type=int, help="Random seed")
+parser.add_argument("--seed", default=122, type=int, help="Random seed")
 
 
 def main(args):
@@ -54,7 +55,7 @@ def main(args):
             ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v)
                       for k, v in sorted(filter(lambda kv: kv[0] in args_to_be_mentioned, vars(args).items()))))
         ))
-        model_path = os.path.join(model_dir, "vae_model.pt")
+        model_path = os.path.join(model_dir, "vae_model_4.pt")
 
     print(f"Loading model from {model_path}")
     load_model(network, model_path)
