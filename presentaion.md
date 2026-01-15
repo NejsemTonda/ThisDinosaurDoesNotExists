@@ -133,8 +133,10 @@ Pro vytvoření trénovacích dat jsme použili https://www.kaggle.com/. Zejmén
 
 # Diskuze
 
-* Co jsme mohli ještě zkusit? (více modelů, větší VAE)
-* Future work?
+::: incremental
+
+* Modely se řádně natrénované, ale neměli dostatečnou kapacitu 
+* Modely s velkým latentním prostorem byly slepá ulička
 
 
-
+:::
